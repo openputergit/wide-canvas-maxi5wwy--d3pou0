@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Market Analysis & AI Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-r from-blue-900 to-black min-h-screen text-white" x-data="stockApp()">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex flex-col md:flex-row gap-8">
+            <!-- Stock Analysis Section -->
+            <div class="w-full md:w-2/3 glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold mb-6">Stock Market Analysis</h2>
+                <div class="mb-6">
+                    <input type="text" x-model="stockSymbol" 
+                           class="w-full p-3 rounded bg-gray-800 text-white border border-gray-700"
+                           placeholder="Enter stock symbol (e.g., AAPL)">
+                    <button @click="analyzeStock()" 
+                            class="mt-4 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg w-full">
+                        Analyze Stock
+                    </button>
+                </div>
+                
+                <div x-show="loading" class="text-center">
+                    <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                </div>
+
+                <div x-show="stockData" class="space-y-6">
+                    <div id="stockChart" class="w-full h-[400px]"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="glass-effect p-4 rounded-lg">
+                            <h3 class="font-semibold">Current Price</h3>
+                            <p x-text="stockData.currentPrice" class="text-2xl text-green-400"></p>
+                        </div>
+                        <div class="glass-effect p-4 rounded-lg">
+                            <h3 class="font-semibold">Predicted Price (Next 7 days)</h3>
+                            <p x-text="stockData.prediction" class="text-2xl text-blue-400"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Assistant Section -->
+            <div class="w-full md:w-1/3 glass-effect rounded-xl p-6">
+                <h2 class="text-2xl font-bold mb-6">AI Assistant</h2>
+                <div class="h-[500px] flex flex-col">
+                    <div class="flex-1 overflow-y-auto mb-4 space-y-4" id="chatContainer">
+                        <template x-for="message in messages" :key="message.id">
+                            <div :class="message.role === 'user' ? 'ml-auto bg-blue-600' : 'bg-gray-700'" 
+                                 class="max-w-[80%] rounded-lg p-3">
+                                <p x-text="message.content"></p>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" x-model="userInput" @keyup.enter="sendMessage"
+                               class="flex-1 p-3 rounded bg-gray-800 text-white border border-gray-700"
+                               placeholder="Ask anything...">
+                        <button @click="sendMessage" 
+                                class="bg-blue-600 hover:bg-blue-700 px-6 rounded-lg">
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function stockApp() {
+            return {
+                stockSymbol: '',
+                stockData: null,
+                loading: false,
+                userInput: '',
+                messages: [
+                    { id: 1, role: 'assistant', content: 'Hello! How can I help you today?' }
+                ],
+                
+                async analyzeStock() {
+                    if (!this.stockSymbol) return;
+                    
+                    this.loading = true;
+                    this.stockData = null;
+                    
+                    try {
+                        // Simulated stock data - In production, replace with actual API call
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        
+                        const mockData = {
+                            currentPrice: '$' + (Math.random() * 1000).toFixed(2),
+                            prediction: '$' + (Math.random() * 1200).toFixed(2),
+                            historicalData: Array.from({length: 30}, (_, i) => ({
+                                date: new Date(Date.now() - (29-i) * 24 * 60 * 60 * 1000),
+                                price: 100 + Math.random() * 50
+                            }))
+                        };
+                        
+                        this.stockData = mockData;
+                        this.renderChart(mockData.historicalData);
+                    } catch (error) {
+                        console.error('Error analyzing stock:', error);
+                        alert('Failed to analyze stock. Please try again.');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                renderChart(data) {
+                    const trace = {
+                        x: data.map(d => d.date),
+                        y: data.map(d => d.price),
+                        type: 'scatter',
+                        mode: 'lines',
+                        line: {
+                            color: '#60A5FA'
+                        }
+                    };
+                    
+                    const layout = {
+                        paper_bgcolor: 'rgba(0,0,0,0)',
+                        plot_bgcolor: 'rgba(0,0,0,0)',
+                        font: {
+                            color: '#FFFFFF'
+                        },
+                        xaxis: {
+                            gridcolor: '#1F2937'
+                        },
+                        yaxis: {
+                            gridcolor: '#1F2937'
+                        }
+                    };
+                    
+                    Plotly.newPlot('stockChart', [trace], layout);
+                },
+                
+                async sendMessage() {
+                    if (!this.userInput.trim()) return;
+                    
+                    const userMessage = {
+                        id: Date.now(),
+                        role: 'user',
+                        content: this.userInput.trim()
+                    };
+                    
+                    this.messages.push(userMessage);
+                    const question = this.userInput;
+                    this.userInput = '';
+                    
+                    try {
+                        const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/ai', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer EKQ6K3gLc7OixAcQXdy9R0anlko1',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                messages: [{
+                                    role: 'user',
+                                    content: [{
+                                        type: 'text',
+                                        text: question
+                                    }]
+                                }]
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        this.messages.push({
+                            id: Date.now() + 1,
+                            role: 'assistant',
+                            content: data.message
+                        });
+                        
+                        // Scroll to bottom
+                        const container = document.getElementById('chatContainer');
+                        container.scrollTop = container.scrollHeight;
+                    } catch (error) {
+                        console.error('Error sending message:', error);
+                        this.messages.push({
+                            id: Date.now() + 1,
+                            role: 'assistant',
+                            content: 'Sorry, I encountered an error. Please try again.'
+                        });
+                    }
+                }
+            };
+        }
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
